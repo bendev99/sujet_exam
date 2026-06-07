@@ -20,15 +20,19 @@ export const AuthProvider = ({ children }) => {
         } else {
           setLoading(false);
         }
-      } else if (event === "SIGNED_IN") {
-        // Après login
-        if (session?.user) {
-          await fetchProfile(session.user);
-        }
+      }
+
+      if (event === "SIGNED_IN" && session?.user) {
+        setTimeout(() => {
+          fetchProfile(session.user);
+        }, 200);
+        return;
       } else if (event === "SIGNED_OUT") {
         // Après logout
         setUser(null);
         setProfile(null);
+        setLoading(false);
+      } else {
         setLoading(false);
       }
     });

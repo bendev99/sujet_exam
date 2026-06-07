@@ -6,7 +6,7 @@ import { useAuth } from "../context/AuthContext";
 
 const Sidebar = () => {
   const navigate = useNavigate();
-  const location = useLocation(); // 👈 Récupère la route actuelle
+  const location = useLocation();
   const { profile } = useAuth();
 
   const navLinks = [
@@ -25,7 +25,7 @@ const Sidebar = () => {
       <div>
         {/* Header */}
         <div className="p-4 border-b border-gray-600">
-          <h2 className="text-lg font-bold">My App</h2>
+          <h2 className="text-lg font-bold">Gestion</h2>
           {profile && (
             <p className="text-xs text-gray-400 mt-1">{profile.full_name}</p>
           )}
@@ -35,7 +35,7 @@ const Sidebar = () => {
         <div className="p-4">
           <ul className="space-y-2">
             {navLinks.map((link) => {
-              // 👈 Compare directement avec l'URL actuelle
+              // Compare directement avec l'URL actuelle
               const isActive = location.pathname === link.path;
 
               return (
