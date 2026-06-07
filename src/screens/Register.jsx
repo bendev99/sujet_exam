@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { supabase } from "../base/supabase";
 import { toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 const Register = () => {
   const [email, setEmail] = useState("");
@@ -9,6 +10,8 @@ const Register = () => {
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState("user");
   const [loading, setLoading] = useState(false);
+
+  const navigate = useNavigate();
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -25,22 +28,26 @@ const Register = () => {
     setLoading(true);
 
     // Envoi des données en métadonnées supabase
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          phone: phone,
-          role: role,
+    const { data, error } = await supabase.auth
+      .signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            phone: phone,
+            role: role,
+          },
         },
-      },
-    });
+      })
+      .then(() => {
+        navigate("/");
+      });
 
     setLoading(false);
 
     if (error) {
-      toast.error(error.message);
+      toast.error("Erreur lors de l'inscription : " + error.message);
       return;
     }
 
