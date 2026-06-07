@@ -1,13 +1,13 @@
-import React, { useState } from "react";
-import { BiLogOut, BiLogOutCircle } from "react-icons/bi";
-import { LuLogOut } from "react-icons/lu";
-import { useNavigate } from "react-router-dom";
+import React from "react";
+import { BiLogOutCircle } from "react-icons/bi";
+import { useNavigate, useLocation, NavLink } from "react-router-dom";
 import { supabase } from "../base/supabase";
-import toast from "react-hot-toast";
+import { useAuth } from "../context/AuthContext";
 
 const Sidebar = () => {
-  const [activeLink, setActiveLink] = useState("/dashboard");
   const navigate = useNavigate();
+  const location = useLocation(); // 👈 Récupère la route actuelle
+  const { profile } = useAuth();
 
   const navLinks = [
     { name: "Dashboard", path: "/dashboard" },
@@ -16,10 +16,8 @@ const Sidebar = () => {
   ];
 
   const logout = async () => {
-    await supabase.auth.signOut().then(() => {
-      toast.success("Deconnexion reussit !");
-      navigate("/");
-    });
+    await supabase.auth.signOut();
+    navigate("/");
   };
 
   return (
@@ -28,24 +26,35 @@ const Sidebar = () => {
         {/* Header */}
         <div className="p-4 border-b border-gray-600">
           <h2 className="text-lg font-bold">My App</h2>
+          {profile && (
+            <p className="text-xs text-gray-400 mt-1">{profile.full_name}</p>
+          )}
         </div>
 
         {/* Navigation */}
         <div className="p-4">
           <ul className="space-y-2">
-            {navLinks.map((link) => (
-              <li key={link.path}>
-                <button
-                  className={`p-2 rounded w-full text-start ${activeLink === link.path ? "bg-gray-600" : "hover:bg-gray-600"}`}
-                  onClick={() => {
-                    setActiveLink(link.path);
-                    navigate(link.path);
-                  }}
-                >
-                  {link.name}
-                </button>
-              </li>
-            ))}
+            {navLinks.map((link) => {
+              // 👈 Compare directement avec l'URL actuelle
+              const isActive = location.pathname === link.path;
+
+              return (
+                <li key={link.path}>
+                  <NavLink
+                    to={link.path}
+                    className={({ isActive }) =>
+                      `p-2 rounded w-full text-start block ${
+                        isActive
+                          ? "bg-gray-600 text-white"
+                          : "text-gray-300 hover:bg-gray-700"
+                      }`
+                    }
+                  >
+                    {link.name}
+                  </NavLink>
+                </li>
+              );
+            })}
           </ul>
         </div>
       </div>

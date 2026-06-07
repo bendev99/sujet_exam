@@ -19,15 +19,15 @@ const Login = () => {
     });
 
     if (error) {
-      toast.error("Login failed: " + error.message);
+      toast.error("Erreur de connexion : " + error.message);
       setLoading(false);
-    } else {
-      toast.success("Login successful!");
-      // Ne pas naviguer immédiatement, laisser le AuthContext gérer la redirection
-      // via le ProtectedRoute
-      setLoading(false);
-      navigate("/dashboard");
+      return;
     }
+
+    toast.success("Connexion réussie !");
+    setLoading(false);
+
+    navigate("/dashboard");
   };
 
   return (
@@ -43,6 +43,7 @@ const Login = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="border border-gray-300 rounded-md py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          required
         />
         <input
           type="password"
@@ -50,13 +51,14 @@ const Login = () => {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="border border-gray-300 rounded-md py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          required
         />
         <button
           type="submit"
           disabled={loading}
           className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          {loading ? "Logging in..." : "Login"}
+          {loading ? "Connexion..." : "Se connecter"}
         </button>
       </form>
     </div>

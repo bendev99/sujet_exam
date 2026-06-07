@@ -9,22 +9,24 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Récupérer la session au chargement (gère le refresh)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        fetchProfile(session.user);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    // 2. Écouter les changements d'authentification
+    // Écouter les changements d'authentification (gère login ET refresh)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        fetchProfile(session.user);
-      } else {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "INITIAL_SESSION") {
+        // Au refresh, charger la session
+        if (session?.user) {
+          await fetchProfile(session.user);
+        } else {
+          setLoading(false);
+        }
+      } else if (event === "SIGNED_IN") {
+        // Après login
+        if (session?.user) {
+          await fetchProfile(session.user);
+        }
+      } else if (event === "SIGNED_OUT") {
+        // Après logout
         setUser(null);
         setProfile(null);
         setLoading(false);
@@ -44,14 +46,15 @@ export const AuthProvider = ({ children }) => {
 
       if (error) {
         console.error("Erreur profil:", error);
-      } else {
-        setUser(authUser);
-        setProfile({ ...profileData, email: authUser.email });
+        setLoading(false);
+        return;
       }
+
+      setUser(authUser);
+      setProfile({ ...profileData, email: authUser.email });
     } catch (error) {
       console.error("Erreur fetch:", error);
     } finally {
-      // CRUCIAL : Toujours débloquer le loading
       setLoading(false);
     }
   };
