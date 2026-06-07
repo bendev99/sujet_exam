@@ -3,6 +3,7 @@ import { BiLogOut, BiLogOutCircle } from "react-icons/bi";
 import { LuLogOut } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../base/supabase";
+import toast from "react-hot-toast";
 
 const Sidebar = () => {
   const [activeLink, setActiveLink] = useState("/dashboard");
@@ -16,6 +17,7 @@ const Sidebar = () => {
 
   const logout = async () => {
     await supabase.auth.signOut().then(() => {
+      toast.success("Deconnexion reussit !");
       navigate("/");
     });
   };

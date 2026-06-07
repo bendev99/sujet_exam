@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "../base/supabase";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -20,10 +20,12 @@ const Login = () => {
 
     if (error) {
       toast.error("Login failed: " + error.message);
+      setLoading(false);
     } else {
       toast.success("Login successful!");
+      // Ne pas naviguer immédiatement, laisser le AuthContext gérer la redirection
+      // via le ProtectedRoute
       setLoading(false);
-
       navigate("/dashboard");
     }
   };

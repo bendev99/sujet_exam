@@ -1,51 +1,19 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../base/supabase";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { Navigate } from "react-router-dom";
 
 const Dashboard = () => {
-  const [user, setUser] = useState(null);
-  const [profiles, setProfiles] = useState([]);
-  const navigate = useNavigate();
+  const { profile, loading } = useAuth();
 
-  const getUser = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (user) {
-      setUser(user);
-    }
-
-    if (!user) {
-      navigate("/");
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user?.id)
-      .single();
-
-    return {
-      ...profile,
-      email: user?.email,
-      auth_id: user?.id,
-    };
-  };
-
-  useEffect(() => {
-    getUser().then((currentUser) => {
-      setUser(currentUser);
-      setProfiles(currentUser);
-    });
-  }, []);
+  if (loading) return <div>Chargement...</div>;
+  if (!profile) return <Navigate to="/" replace />;
 
   return (
     <div>
-      Dashboard
-      <p>{profiles?.id}</p>
-      <p>{profiles?.full_name}</p>
-      <p>{profiles?.email}</p>
-      <p>{profiles?.phone}</p>
+      <h1>Dashboard</h1>
+      <p>ID: {profile?.id}</p>
+      <p>Nom: {profile?.full_name}</p>
+      <p>Email: {profile?.email}</p>
+      <p>Téléphone: {profile?.phone}</p>
     </div>
   );
 };
