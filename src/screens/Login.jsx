@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../base/supabase";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 
 const Login = () => {
@@ -8,27 +9,30 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { profile } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
       toast.error("Erreur de connexion : " + error.message);
-      setLoading(false);
-      return;
     }
 
-    toast.success("Connexion réussie !");
     setLoading(false);
-
-    navigate("/dashboard");
   };
+
+  useEffect(() => {
+    if (profile) {
+      toast.success("Connexion réussie !");
+      navigate("/dashboard");
+    }
+  }, [profile, navigate]);
 
   return (
     <div className="h-screen w-screen flex items-center justify-center bg-gray-100">

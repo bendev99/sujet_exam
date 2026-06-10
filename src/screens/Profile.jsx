@@ -1,13 +1,33 @@
 import { useAuth } from "../context/AuthContext";
 import { useUsers } from "../context/UsersContext";
 import { Navigate } from "react-router-dom";
+import { supabase } from "../base/supabase";
+import { useState } from "react";
+import toast from "react-hot-toast";
 
 const Profile = () => {
   const { profile, loading } = useAuth();
-  const { allUsers, loading: usersLoading } = useUsers();
+  const { allUsers, loading: usersLoading, refreshUsers } = useUsers();
+  const [updatingUserId, setUpdatingUserId] = useState(null);
 
   if (loading) return <div>Chargement...</div>;
   if (!profile) return <Navigate to="/" replace />;
+
+  const handleParentChange = async (userId, newParentId) => {
+    setUpdatingUserId(userId);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ parent_id: newParentId || null })
+      .eq("id", userId);
+
+    if (error) {
+      toast.error("Erreur lors de la mise à jour : " + error.message);
+    } else {
+      toast.success("Parent mis à jour");
+      refreshUsers();
+    }
+    setUpdatingUserId(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -42,7 +62,7 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* Section Admin - Liste des utilisateurs */}
+      {/* Section Admin - Liste des utilisateurs avec gestion du parent */}
       {profile?.role === "admin" && (
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
@@ -68,10 +88,10 @@ const Profile = () => {
                       Email
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Téléphone
+                      Rôle
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Rôle
+                      Parent
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Date d'inscription
@@ -79,33 +99,57 @@ const Profile = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {allUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {user.full_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {user.email}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {user.phone || "-"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            user.role === "admin"
-                              ? "bg-amber-100 text-amber-800"
-                              : "bg-blue-100 text-blue-800"
-                          }`}
-                        >
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(user.created_at).toLocaleDateString("fr-FR")}
-                      </td>
-                    </tr>
-                  ))}
+                  {allUsers.map((user) => {
+                    // Liste des parents possibles (tous les autres utilisateurs)
+                    const possibleParents = allUsers.filter(
+                      (u) => u.id !== user.id,
+                    );
+                    return (
+                      <tr key={user.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {user.full_name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {user.email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {updatingUserId === user.id ? (
+                            <span className="text-gray-400">
+                              Mise à jour...
+                            </span>
+                          ) : (
+                            <select
+                              value={user.parent_id || ""}
+                              onChange={(e) =>
+                                handleParentChange(
+                                  user.id,
+                                  e.target.value || null,
+                                )
+                              }
+                              className="border rounded px-2 py-1 text-sm w-48"
+                            >
+                              <option value="">Aucun</option>
+                              {possibleParents.map((parent) => (
+                                <option key={parent.id} value={parent.id}>
+                                  {parent.full_name} ({parent.role})
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(user.created_at).toLocaleDateString(
+                            "fr-FR",
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "../base/supabase";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const Register = () => {
   const [email, setEmail] = useState("");
@@ -10,8 +11,8 @@ const Register = () => {
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState("user");
   const [loading, setLoading] = useState(false);
-
   const navigate = useNavigate();
+  const { profile } = useAuth();
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -27,22 +28,17 @@ const Register = () => {
 
     setLoading(true);
 
-    // Envoi des données en métadonnées supabase
-    const { data, error } = await supabase.auth
-      .signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            phone: phone,
-            role: role,
-          },
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          phone: phone,
+          role: role,
         },
-      })
-      .then(() => {
-        navigate("/");
-      });
+      },
+    });
 
     setLoading(false);
 
@@ -59,12 +55,14 @@ const Register = () => {
     } else {
       toast.success("Compte créé avec succès !");
     }
-
-    setFullName("");
-    setEmail("");
-    setPassword("");
-    setPhone("");
   };
+
+  useEffect(() => {
+    if (profile) {
+      toast.success("Inscription réussie !");
+      navigate("/dashboard");
+    }
+  }, [profile, navigate]);
 
   return (
     <div className="h-screen w-screen flex items-center justify-center bg-gray-100">
@@ -75,7 +73,6 @@ const Register = () => {
         <h1 className="text-3xl font-bold text-center text-gray-800">
           Register
         </h1>
-
         <input
           type="text"
           placeholder="Full Name"
@@ -104,20 +101,23 @@ const Register = () => {
           onChange={(e) => setPhone(e.target.value)}
           className="border border-gray-300 rounded-md py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          className="border border-gray-300 rounded-md py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="user">User</option>
-          <option value="admin">Admin</option>
-        </select>
-
+        <div className="flex flex-col">
+          <label>Titre / Departement</label>
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="border border-gray-300 rounded-md py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="user">Enseignant</option>
+            <option value="cisco">Cisco</option>
+            <option value="dren">DREN</option>
+            <option value="men">DEXAMC</option>
+          </select>
+        </div>
         <button
           type="submit"
           disabled={loading}
-          className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+          className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
         >
           {loading ? "Registering..." : "Register"}
         </button>
