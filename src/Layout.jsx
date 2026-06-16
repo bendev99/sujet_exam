@@ -5,11 +5,11 @@ import { Outlet } from "react-router-dom";
 
 const Layout = () => {
   return (
-    <div className="flex h-screen w-screen">
+    <div className="flex min-h-screen max-w-screen">
       <Sidebar />
       <AppBar />
 
-      <main className="flex-1 mt-16 p-4">
+      <main className="flex-1 mt-16 ml-54 p-4">
         <Outlet />
       </main>
     </div>

@@ -12,7 +12,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 const App = () => {
   return (
-    <div className="min-h-screen w-screen bg-gray-100">
+    <div className="bg-gray-100">
       <Toaster />
       <AuthProvider>
         <UsersProvider>

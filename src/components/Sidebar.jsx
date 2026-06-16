@@ -21,13 +21,13 @@ const Sidebar = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen w-54 bg-gray-800 text-white justify-between">
+    <div className="flex flex-col h-screen w-54 fixed left-0 bg-linear-to-b from-blue-950 to-blue-800 text-white justify-between">
       <div>
         {/* Header */}
         <div className="p-4 border-b border-gray-600">
           <h2 className="text-lg font-bold">Gestion</h2>
           {profile && (
-            <p className="text-xs text-gray-400 mt-1">{profile.full_name}</p>
+            <p className="text-xs text-white mt-1">{profile.full_name}</p>
           )}
         </div>
 
@@ -45,8 +45,8 @@ const Sidebar = () => {
                     className={({ isActive }) =>
                       `p-2 rounded w-full text-start block ${
                         isActive
-                          ? "bg-gray-600 text-white"
-                          : "text-gray-300 hover:bg-gray-700"
+                          ? "bg-blue-600 text-white"
+                          : "text-gray-100 hover:bg-blue-900"
                       }`
                     }
                   >
