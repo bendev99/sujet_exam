@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useUsers } from "../context/UsersContext";
 import { supabase } from "../base/supabase";
@@ -18,14 +18,22 @@ import {
   FaUsers,
   FaUserEdit,
   FaTimes,
+  FaKey, // Ajouté pour la nouvelle section
 } from "react-icons/fa";
 import { LuSettings } from "react-icons/lu";
 
 const Parametre = () => {
   const { profile, refreshProfile } = useAuth();
   const { allUsers, loading: usersLoading, refreshUsers } = useUsers();
+
   const [loading, setLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
+
+  // NOUVEAU: États pour les mots de passe de la Zone Finale
+  const [finalPass1, setFinalPass1] = useState("");
+  const [finalPass2, setFinalPass2] = useState("");
+  const [finalPassLoading, setFinalPassLoading] = useState(false);
+  const [fetchingFinalPass, setFetchingFinalPass] = useState(false);
 
   // État du formulaire profil
   const [formData, setFormData] = useState({
@@ -45,6 +53,53 @@ const Parametre = () => {
   const [notifications, setNotifications] = useState(
     localStorage.getItem("notifications") !== "false",
   );
+
+  // NOUVEAU: Récupération des mots de passe de la zone finale au chargement
+  useEffect(() => {
+    if (profile?.role === "admin") {
+      fetchFinalZonePasswords();
+    }
+  }, [profile]);
+
+  const fetchFinalZonePasswords = async () => {
+    setFetchingFinalPass(true);
+    const { data, error } = await supabase
+      .from("app_settings")
+      .select("*")
+      .in("key", ["final_zone_pass_1", "final_zone_pass_2"]);
+
+    if (!error && data) {
+      const p1 = data.find((s) => s.key === "final_zone_pass_1");
+      const p2 = data.find((s) => s.key === "final_zone_pass_2");
+      if (p1) setFinalPass1(p1.value);
+      if (p2) setFinalPass2(p2.value);
+    }
+    setFetchingFinalPass(false);
+  };
+
+  // NOUVEAU: Sauvegarde des mots de passe de la zone finale
+  const updateFinalZonePasswords = async (e) => {
+    e.preventDefault();
+    if (!finalPass1 || !finalPass2) {
+      return toast.error("Les deux mots de passe sont obligatoires");
+    }
+
+    setFinalPassLoading(true);
+    try {
+      // Upsert crée la ligne si elle n'existe pas, ou la met à jour si elle existe
+      await supabase
+        .from("app_settings")
+        .upsert({ key: "final_zone_pass_1", value: finalPass1 });
+      await supabase
+        .from("app_settings")
+        .upsert({ key: "final_zone_pass_2", value: finalPass2 });
+      toast.success("Mots de passe de la Zone Finale mis à jour !");
+    } catch (err) {
+      toast.error("Erreur lors de la sauvegarde");
+    } finally {
+      setFinalPassLoading(false);
+    }
+  };
 
   const handleProfileChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -85,10 +140,12 @@ const Parametre = () => {
       toast.error("Le mot de passe doit contenir au moins 6 caractères");
       return;
     }
+
     setPasswordLoading(true);
     const { error } = await supabase.auth.updateUser({
       password: passwordData.newPassword,
     });
+
     if (error) {
       toast.error("Erreur : " + error.message);
     } else {
@@ -258,6 +315,75 @@ const Parametre = () => {
           </form>
         </div>
 
+        {/* ========================================== */}
+        {/* NOUVEAU: Section Admin - Zone Finale       */}
+        {/* ========================================== */}
+        {profile?.role === "admin" && (
+          <div className="bg-white rounded-2xl shadow-md overflow-hidden">
+            <div className="bg-linear-to-r from-red-500 to-red-600 px-6 py-4">
+              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                <FaKey /> Sécurité de la Zone Finale
+              </h2>
+            </div>
+            <form onSubmit={updateFinalZonePasswords} className="p-6 space-y-4">
+              {fetchingFinalPass ? (
+                <div className="text-center py-6">
+                  <FaSpinner className="animate-spin text-gray-400 text-2xl mx-auto" />
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Modifiez ici les mots de passe requis pour déverrouiller
+                    l'impression des sujets officiels dans la Zone Finale.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Mot de passe Propriétaire 1
+                      </label>
+                      <input
+                        type="text" // Mettez "password" si vous voulez masquer les caractères
+                        value={finalPass1}
+                        onChange={(e) => setFinalPass1(e.target.value)}
+                        className="w-full ring-1 ring-gray-300 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-600"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Mot de passe Propriétaire 2
+                      </label>
+                      <input
+                        type="text"
+                        value={finalPass2}
+                        onChange={(e) => setFinalPass2(e.target.value)}
+                        className="w-full ring-1 ring-gray-300 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-600"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={finalPassLoading}
+                      className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-lg transition disabled:opacity-50"
+                    >
+                      {finalPassLoading ? (
+                        <FaSpinner className="animate-spin" />
+                      ) : (
+                        <FaSave />
+                      )}
+                      {finalPassLoading
+                        ? "Enregistrement..."
+                        : "Mettre à jour les accès"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </form>
+          </div>
+        )}
+
         {/* Section Admin : Gestion utilisateurs (édition) */}
         {profile?.role === "admin" && (
           <div className="bg-white rounded-2xl shadow-md overflow-hidden">
@@ -347,6 +473,7 @@ const UserEditRow = ({ user, allUsers, refreshUsers }) => {
         parent_id: formData.parent_id || null,
       })
       .eq("id", user.id);
+
     if (error) {
       toast.error("Erreur : " + error.message);
     } else {

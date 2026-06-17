@@ -16,6 +16,8 @@ import {
 } from "react-icons/fa";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
+import UploadSection from "../components/dashboard/UploadSection";
+import SujetRow from "../components/dashboard/SujetRow";
 
 const Dashboard = () => {
   const { profile } = useAuth();
@@ -34,7 +36,7 @@ const Dashboard = () => {
 
   if (!profile) return <Navigate to="/" replace />;
 
-  // ==================== FETCH ====================
+  // ====== RECUPERATION DE TOUT LES SUJETS DANS LA BASE ======
   const fetchSujets = useCallback(async () => {
     setLoadingFiles(true);
     try {
@@ -92,13 +94,13 @@ const Dashboard = () => {
         const descendantIds = await getDescendantIds(profile.id);
         filtered = filtered.filter((f) => descendantIds.includes(f.ownerId));
       }
-      // Admin voit tout
 
       // Propriétaires
       const ownerIds = [...new Set(filtered.map((f) => f.ownerId))].filter(
         Boolean,
       );
       let ownerMap = {};
+
       if (ownerIds.length > 0) {
         const { data: owners } = await supabase
           .from("profiles")
@@ -132,6 +134,7 @@ const Dashboard = () => {
   const handleCorrectionUpload = async (e) => {
     e.preventDefault();
     if (!correctionFile || !currentSujet) return;
+
     setUploadingCorrection(true);
     const timestamp = Date.now();
     const safeName = correctionFile.name.replace(/\s+/g, "_");
@@ -430,166 +433,5 @@ const Dashboard = () => {
     </div>
   );
 };
-
-// ====================== COMPOSANTS ======================
-const UploadSection = ({
-  file,
-  setFile,
-  matiere,
-  setMatiere,
-  uploading,
-  handleUpload,
-  dragActive,
-  setDragActive,
-}) => {
-  const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(e.type === "dragenter" || e.type === "dragover");
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    const droppedFile = e.dataTransfer.files[0];
-    if (
-      droppedFile?.type ===
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    ) {
-      setFile(droppedFile);
-    } else {
-      toast.error("Seuls les fichiers Word.docx sont acceptés");
-    }
-  };
-
-  return (
-    <div className="bg-white rounded-3xl shadow-lg p-6">
-      <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-        <FaUpload className="text-blue-600" /> Déposer un nouveau sujet
-      </h2>
-
-      <form onSubmit={handleUpload}>
-        <div
-          className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all ${
-            dragActive
-              ? "border-blue-500 bg-blue-50"
-              : "border-gray-300 hover:border-blue-400"
-          }`}
-          onDragEnter={handleDrag}
-          onDragOver={handleDrag}
-          onDragLeave={handleDrag}
-          onDrop={handleDrop}
-        >
-          <input
-            type="file"
-            accept="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            onChange={(e) => setFile(e.target.files[0])}
-            className="hidden"
-            id="file-upload"
-          />
-          <label htmlFor="file-upload" className="cursor-pointer block">
-            <FaFilePdf className="text-5xl text-red-500 mx-auto mb-3" />
-            <p className="font-medium text-gray-700">
-              {file
-                ? file.name
-                : "Glissez votre fichier ici ou cliquez pour sélectionner"}
-            </p>
-          </label>
-        </div>
-
-        <div className="flex gap-4 mt-6 justify-end items-center">
-          <div className="flex items-center ring ring-blue-300 p-1 rounded-lg">
-            <p className="font-semibold">Matière :</p>
-            <select
-              value={matiere}
-              onChange={(e) => setMatiere(e.target.value)}
-              className=" rounded-lg px-0 py-2 focus:outline-none"
-            >
-              <option value="maths">Mathématiques</option>
-              <option value="pc">Physique-Chimie</option>
-              <option value="francais">Français</option>
-              <option value="philo">Philosophie</option>
-              <option value="histo-geo">Histoire-Géographie</option>
-              <option value="anglais">Anglais</option>
-            </select>
-          </div>
-
-          <button
-            type="submit"
-            disabled={uploading || !file}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl transition"
-          >
-            {uploading ? <FaSpinner className="animate-spin" /> : <FaUpload />}
-            {uploading ? "Publication..." : "Publier le sujet"}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-};
-
-const SujetRow = ({ sujet, role, updateStatut, downloadFile, onCorriger }) => {
-  const getStatusStyle = (statut) => {
-    const styles = {
-      brouillon: "bg-yellow-100 text-yellow-700",
-      cisco_valide: "bg-blue-100 text-blue-700",
-      dren_valide: "bg-purple-100 text-purple-700",
-      dexamc_valide: "bg-green-100 text-green-700",
-      final: "bg-emerald-100 text-emerald-700",
-    };
-    return styles[statut] || "bg-gray-100 text-gray-700";
-  };
-
-  return (
-    <tr className="hover:bg-gray-50 transition-colors">
-      <td className="px-6 py-4 font-medium text-gray-800">{sujet.name}</td>
-      <td className="px-6 py-4 capitalize">{sujet.matiere}</td>
-      <td className="px-6 py-4">
-        <span
-          className={`px-3 py-1 text-xs rounded-full ${getStatusStyle(sujet.statut)}`}
-        >
-          {sujet.statut.replace(/_/g, " ")}
-        </span>
-      </td>
-      <td className="px-6 py-4 text-gray-600">{sujet.owner?.full_name}</td>
-      <td className="px-6 py-4 text-sm text-gray-500">
-        {formatDistanceToNow(sujet.uploadedAt, { addSuffix: true, locale: fr })}
-      </td>
-      <td className="px-6 py-4 text-right space-x-4">
-        <button
-          onClick={() => downloadFile(sujet.fullPath, sujet.name)}
-          className="text-blue-600 hover:text-blue-700"
-          title="Télécharger"
-        >
-          <FaDownload size={18} />
-        </button>
-
-        {role === "cisco" && sujet.statut === "brouillon" && (
-          <button
-            onClick={() => onCorriger(sujet)}
-            className="text-blue-600 hover:text-blue-700"
-            title="Corriger"
-          >
-            <FaEdit size={18} />
-          </button>
-        )}
-      </td>
-    </tr>
-  );
-};
-
-const EmptyState = () => (
-  <div className="text-center py-16 text-gray-400">
-    <FaFolderOpen className="text-6xl mx-auto mb-4" />
-    <p className="text-lg">Aucun sujet disponible pour le moment</p>
-  </div>
-);
-
-const LoadingSpinner = () => (
-  <div className="flex items-center justify-center h-screen bg-gray-50">
-    <FaSpinner className="animate-spin text-blue-600 text-5xl" />
-  </div>
-);
 
 export default Dashboard;
