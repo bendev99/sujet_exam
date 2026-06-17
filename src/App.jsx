@@ -9,6 +9,7 @@ import Register from "./screens/Register";
 import { AuthProvider } from "./context/AuthContext";
 import { UsersProvider } from "./context/UsersContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import FinalZone from "./screens/FinalZone";
 
 const App = () => {
   return (
@@ -26,6 +27,7 @@ const App = () => {
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/settings" element={<Parametre />} />
+                  <Route path="/final" element={<FinalZone />} />
                 </Route>
               </Route>
             </Routes>
