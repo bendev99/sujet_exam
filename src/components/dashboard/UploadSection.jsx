@@ -1,5 +1,6 @@
 import React from "react";
 import { FaFilePdf, FaSpinner, FaUpload } from "react-icons/fa";
+import toast from "react-hot-toast";
 
 const UploadSection = ({
   file,
@@ -21,7 +22,6 @@ const UploadSection = ({
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-
     const droppedFile = e.dataTransfer.files[0];
     if (
       droppedFile?.type ===
@@ -29,7 +29,7 @@ const UploadSection = ({
     ) {
       setFile(droppedFile);
     } else {
-      toast.error("Seuls les fichiers Word.docx sont acceptés");
+      toast.error("Seuls les fichiers Word (.docx) sont acceptés");
     }
   };
 
@@ -38,7 +38,6 @@ const UploadSection = ({
       <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
         <FaUpload className="text-blue-600" /> Déposer un nouveau sujet
       </h2>
-
       <form onSubmit={handleUpload}>
         <div
           className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all ${
@@ -53,7 +52,7 @@ const UploadSection = ({
         >
           <input
             type="file"
-            accept="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             onChange={(e) => setFile(e.target.files[0])}
             className="hidden"
             id="file-upload"
@@ -68,13 +67,13 @@ const UploadSection = ({
           </label>
         </div>
 
-        <div className="flex gap-4 mt-6 justify-end items-center">
-          <div className="flex items-center ring ring-blue-300 p-1 rounded-lg">
-            <p className="font-semibold">Matière :</p>
+        <div className="flex flex-col md:flex-row gap-4 mt-6 justify-end items-center">
+          <div className="flex items-center ring ring-blue-300 p-1 rounded-lg w-full md:w-auto">
+            <p className="font-semibold px-2">Matière :</p>
             <select
               value={matiere}
               onChange={(e) => setMatiere(e.target.value)}
-              className=" rounded-lg px-0 py-2 focus:outline-none"
+              className="rounded-lg px-2 py-2 focus:outline-none bg-transparent"
             >
               <option value="maths">Mathématiques</option>
               <option value="pc">Physique-Chimie</option>
@@ -88,7 +87,7 @@ const UploadSection = ({
           <button
             type="submit"
             disabled={uploading || !file}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl transition"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl transition w-full md:w-auto justify-center"
           >
             {uploading ? <FaSpinner className="animate-spin" /> : <FaUpload />}
             {uploading ? "Publication..." : "Publier le sujet"}

@@ -21,26 +21,36 @@ import SujetRow from "../components/dashboard/SujetRow";
 
 const Dashboard = () => {
   const { profile } = useAuth();
-
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [matiere, setMatiere] = useState("maths");
   const [sujets, setSujets] = useState([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
   const [correctionFile, setCorrectionFile] = useState(null);
   const [currentSujet, setCurrentSujet] = useState(null);
   const [uploadingCorrection, setUploadingCorrection] = useState(false);
 
+  // SOLUTION PROBLÈME 1 : États séparés pour chaque bouton
+  const [processingDren, setProcessingDren] = useState(false);
+  const [processingDexamc, setProcessingDexamc] = useState(false);
+  const [processingFinal, setProcessingFinal] = useState(false);
+
+  const matieresList = [
+    "maths",
+    "francais",
+    "pc",
+    "philo",
+    "histo-geo",
+    "anglais",
+  ];
+
   if (!profile) return <Navigate to="/" replace />;
 
-  // ====== RECUPERATION DE TOUT LES SUJETS DANS LA BASE ======
   const fetchSujets = useCallback(async () => {
     setLoadingFiles(true);
     try {
-      // 1. Lister fichiers du bucket
       const { data: folders } = await supabase.storage
         .from("sujets")
         .list("", { limit: 1000 });
@@ -63,7 +73,6 @@ const Dashboard = () => {
         }
       }
 
-      // 2. Métadonnées
       const filePaths = allFiles.map((f) => f.fullPath);
       const { data: metadata } = await supabase
         .from("sujets")
@@ -82,20 +91,15 @@ const Dashboard = () => {
         statut: metadataMap[file.fullPath]?.statut || "brouillon",
       }));
 
-      // ==================== FILTRAGE ====================
-      // On exclut les sujets remplacés
       let filtered = enriched.filter((f) => f.statut !== "remplace");
 
       if (profile.role === "user") {
-        // Enseignant : ses propres sujets
         filtered = filtered.filter((f) => f.ownerId === profile.id);
       } else if (["cisco", "dren", "men", "dexamc"].includes(profile.role)) {
-        // Rôles hiérarchiques : tous les sujets de leurs descendants
         const descendantIds = await getDescendantIds(profile.id);
         filtered = filtered.filter((f) => descendantIds.includes(f.ownerId));
       }
 
-      // Propriétaires
       const ownerIds = [...new Set(filtered.map((f) => f.ownerId))].filter(
         Boolean,
       );
@@ -130,24 +134,20 @@ const Dashboard = () => {
     return data || [];
   };
 
-  // ==================== CORRECTION ====================
   const handleCorrectionUpload = async (e) => {
     e.preventDefault();
     if (!correctionFile || !currentSujet) return;
-
     setUploadingCorrection(true);
     const timestamp = Date.now();
     const safeName = correctionFile.name.replace(/\s+/g, "_");
     const filePath = `${currentSujet.ownerId}/corrige_${timestamp}_${safeName}`;
 
     try {
-      // 1. Upload du fichier corrigé
       const { error: uploadError } = await supabase.storage
         .from("sujets")
         .upload(filePath, correctionFile);
       if (uploadError) throw uploadError;
 
-      // 2. Marquer l'ancien comme remplacé
       await supabase
         .from("sujets")
         .update({
@@ -156,7 +156,6 @@ const Dashboard = () => {
         })
         .eq("id", currentSujet.id);
 
-      // 3. Insérer le nouveau sujet corrigé
       await supabase.from("sujets").insert({
         user_id: currentSujet.user_id,
         matiere: currentSujet.matiere,
@@ -177,12 +176,10 @@ const Dashboard = () => {
     }
   };
 
-  // ==================== UPLOAD INITIAL ====================
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!file || !matiere)
       return toast.error("Fichier et matière sont obligatoires");
-
     setUploading(true);
     const timestamp = Date.now();
     const safeName = file.name.replace(/\s+/g, "_");
@@ -232,8 +229,92 @@ const Dashboard = () => {
     }
   };
 
+  // Bouton de selection auto pour Dren
+  const handleTriDren = async () => {
+    setProcessingDren(true);
+    let hasError = false;
+    let triFiles = 0;
+
+    for (const mat of matieresList) {
+      const { data, error } = await supabase.rpc("select_15_for_dren", {
+        p_matiere: mat,
+      });
+      if (error) {
+        console.error(`Erreur tri DREN pour ${mat}:`, error);
+        hasError = true;
+      } else if (data) {
+        triFiles += data.length || 0;
+      }
+    }
+
+    setProcessingDren(false);
+
+    if (hasError) toast.error("Erreur lors du tri de certaines matières");
+    else toast.success(`${triFiles} sujets sélectionnés`);
+    fetchSujets();
+  };
+
+  // Bouton de selection auto pour Dexamc
+  const handleTriDexamc = async () => {
+    setProcessingDexamc(true);
+    let hasError = false;
+    let triFiles = 0;
+
+    for (const mat of matieresList) {
+      const { data, error } = await supabase.rpc("select_10_for_dexamc", {
+        p_matiere: mat,
+      });
+      if (error) {
+        console.error(`Erreur tri DEXAMC pour ${mat}:`, error);
+        hasError = true;
+      } else if (data) {
+        triFiles += data.length || 0;
+      }
+    }
+
+    setProcessingDexamc(false);
+
+    if (hasError) toast.error("Erreur lors du tri de certaines matières");
+    else toast.success(`${triFiles} sujets sélectionnés`);
+    fetchSujets();
+  };
+
+  // Bouton de selection auto pour les sujets finaux
+  const handleGenererFinaux = async () => {
+    setProcessingFinal(true);
+    let hasError = false;
+    let totalSelected = 0;
+
+    for (const mat of matieresList) {
+      // Appel de la fonction RPC
+      const { data, error } = await supabase.rpc("select_3_final", {
+        p_matiere: mat,
+      });
+
+      if (error) {
+        console.error(`Erreur génération finale pour ${mat}:`, error);
+        hasError = true;
+      } else if (data) {
+        totalSelected += data.length || 0;
+      }
+    }
+
+    setProcessingFinal(false);
+
+    if (hasError) {
+      toast.error("Erreur lors de la génération finale");
+    } else {
+      toast.success(`${totalSelected} sujets finaux générés`);
+    }
+
+    // Rafraîchir pour voir les nouveaux statuts
+    await fetchSujets();
+  };
+
   useEffect(() => {
-    if (profile) fetchSujets();
+    if (profile) {
+      fetchSujets();
+    }
   }, [profile, fetchSujets]);
 
   return (
@@ -246,7 +327,7 @@ const Dashboard = () => {
               <FaFolderOpen className="text-blue-600" />
               Tableau de bord
             </h1>
-            <p className="text-gray-600 mt-1">Gestion des sujets d’examen</p>
+            <p className="text-gray-600 mt-1">Gestion des sujets d'examen</p>
           </div>
           <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl shadow-sm">
             <span className="font-medium">{profile.full_name}</span>
@@ -272,64 +353,54 @@ const Dashboard = () => {
 
         {/* Liste des sujets */}
         <div className="bg-white rounded-3xl shadow-lg overflow-hidden">
-          <div className="px-6 py-4 bg-gray-50 border-b flex justify-between items-center">
+          <div className="px-6 py-4 bg-gray-50 border-b flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <h2 className="text-xl font-semibold flex items-center gap-2">
               <FaFilePdf className="text-red-500" /> Sujets disponibles
             </h2>
 
+            {/* BOUTONS DE TRI CORRIGÉS */}
             {profile.role === "dren" && (
-              <div className="px-6 py-3 bg-gray-50 flex justify-end">
+              <div className="flex justify-end w-full md:w-auto">
                 <button
-                  onClick={async () => {
-                    const { error } = await supabase.rpc("select_15_for_dren", {
-                      p_matiere: matiere,
-                    });
-                    if (error) toast.error("Erreur de tri : " + error.message);
-                    else {
-                      toast.success("15 sujets sélectionnés pour DREN");
-                      fetchSujets();
-                    }
-                  }}
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-xl flex items-center gap-2"
+                  onClick={handleTriDren}
+                  disabled={processingDren}
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 disabled:opacity-50"
                 >
-                  <FaRandom /> Trier 15 sujets
+                  {processingDren ? (
+                    <FaSpinner className="animate-spin" />
+                  ) : (
+                    <FaRandom />
+                  )}
+                  Trier 15 sujets (Toutes matières)
                 </button>
               </div>
             )}
 
             {profile.role === "men" && (
-              <div className="px-6 py-3 bg-gray-50 flex justify-end gap-4">
+              <div className="flex justify-end gap-4 w-full md:w-auto flex-wrap">
                 <button
-                  onClick={async () => {
-                    const { error } = await supabase.rpc(
-                      "select_10_for_dexamc",
-                      { p_matiere: matiere },
-                    );
-                    if (error) toast.error("Erreur de tri : " + error.message);
-                    else {
-                      toast.success("10 sujets sélectionnés pour DEXAMC");
-                      fetchSujets();
-                    }
-                  }}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl flex items-center gap-2"
+                  onClick={handleTriDexamc}
+                  disabled={processingDexamc}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 disabled:opacity-50"
                 >
-                  <FaRandom /> Trier 10 sujets
+                  {processingDexamc ? (
+                    <FaSpinner className="animate-spin" />
+                  ) : (
+                    <FaRandom />
+                  )}
+                  Trier 10 sujets (Toutes matières)
                 </button>
                 <button
-                  onClick={async () => {
-                    const { error } = await supabase.rpc("select_3_final", {
-                      p_matiere: matiere,
-                    });
-                    if (error)
-                      toast.error("Erreur de tri final : " + error.message);
-                    else {
-                      toast.success("3 sujets finaux générés");
-                      fetchSujets();
-                    }
-                  }}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl flex items-center gap-2"
+                  onClick={handleGenererFinaux}
+                  disabled={processingFinal}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 disabled:opacity-50"
                 >
-                  <FaStar /> Générer 3 finaux
+                  {processingFinal ? (
+                    <FaSpinner className="animate-spin" />
+                  ) : (
+                    <FaStar />
+                  )}
+                  Générer 3 finaux (Toutes matières)
                 </button>
               </div>
             )}
@@ -393,6 +464,7 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Modal de correction */}
         {showCorrectionModal && (
           <div className="fixed inset-0 bg-gray-900/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Navigate } from "react-router-dom";
 import { supabase } from "../base/supabase";
@@ -28,7 +28,6 @@ const FinalZone = () => {
   const handleUnlock = async (e) => {
     e.preventDefault();
     setUnlocking(true);
-
     try {
       // Appel de la fonction RPC sécurisée (les mots de passe ne transitent pas en clair)
       const { data, error } = await supabase.rpc(
@@ -78,10 +77,18 @@ const FinalZone = () => {
       ];
       let allFinal = [];
 
+      // Pour chaque matière, on ne prend QUE les 3 sujets les plus récents
       for (const mat of matieres) {
-        const { data, error } = await supabase.rpc("select_3_final", {
-          p_matiere: mat,
-        });
+        const { data, error } = await supabase
+          .from("sujets")
+          .select("*")
+          .eq("matiere", mat)
+          .eq("statut", "final")
+          .order("created_at", { ascending: false })
+          .limit(3);
+
+        console.log("Donner : ", data);
+
         if (error) {
           console.error(`Erreur pour ${mat}:`, error);
         } else if (data?.length) {
@@ -120,6 +127,12 @@ const FinalZone = () => {
     if (error) return toast.error("Impossible de télécharger");
     window.open(data.signedUrl, "_blank");
   };
+
+  useEffect(() => {
+    if (profile) {
+      fetchFinalSujets();
+    }
+  }, [profile, finalSujets.length]);
 
   // ====== ÉCRAN VERROUILLÉ ======
   if (!isUnlocked) {
