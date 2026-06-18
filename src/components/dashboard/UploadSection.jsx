@@ -1,5 +1,11 @@
 import React from "react";
-import { FaFilePdf, FaSpinner, FaUpload } from "react-icons/fa";
+import {
+  FaDochub,
+  FaFilePdf,
+  FaFileWord,
+  FaSpinner,
+  FaUpload,
+} from "react-icons/fa";
 import toast from "react-hot-toast";
 
 const UploadSection = ({
@@ -58,7 +64,7 @@ const UploadSection = ({
             id="file-upload"
           />
           <label htmlFor="file-upload" className="cursor-pointer block">
-            <FaFilePdf className="text-5xl text-red-500 mx-auto mb-3" />
+            <FaFileWord className="text-5xl text-blue-500 mx-auto mb-3" />
             <p className="font-medium text-gray-700">
               {file
                 ? file.name

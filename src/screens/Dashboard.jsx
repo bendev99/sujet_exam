@@ -5,7 +5,7 @@ import { supabase } from "../base/supabase";
 import toast from "react-hot-toast";
 import {
   FaUpload,
-  FaFilePdf,
+  FaFileWord,
   FaDownload,
   FaSpinner,
   FaCheckCircle,
@@ -355,7 +355,7 @@ const Dashboard = () => {
         <div className="bg-white rounded-3xl shadow-lg overflow-hidden">
           <div className="px-6 py-4 bg-gray-50 border-b flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <h2 className="text-xl font-semibold flex items-center gap-2">
-              <FaFilePdf className="text-red-500" /> Sujets disponibles
+              <FaFileWord className="text-blue-500" /> Sujets disponibles
             </h2>
 
             {/* BOUTONS DE TRI CORRIGÉS */}
