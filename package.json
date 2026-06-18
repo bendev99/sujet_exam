@@ -1,7 +1,7 @@
 {
-  "name": "sujet_exam",
+  "name": "gestion_sujet_exam",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
