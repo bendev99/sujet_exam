@@ -12,9 +12,9 @@ const Sidebar = () => {
   const { profile } = useAuth();
 
   const navLinks = [
-    { name: "Dashboard", path: "/dashboard", icon: <FaHome /> },
+    { name: "Tableau de bord", path: "/dashboard", icon: <FaHome /> },
     { name: "Profile", path: "/profile", icon: <FaUser /> },
-    { name: "Settings", path: "/settings", icon: <FaCog /> },
+    { name: "Paramètres", path: "/settings", icon: <FaCog /> },
   ];
 
   const secureLinks = [];
@@ -36,9 +36,11 @@ const Sidebar = () => {
       <div>
         {/* Header */}
         <div className="p-4 border-b border-gray-600">
-          <h2 className="text-lg font-bold">Gestion</h2>
+          <h2 className="text-lg font-bold">Gestion Sujet</h2>
           {profile && (
-            <p className="text-xs text-white mt-1">{profile.full_name}</p>
+            <p className="text-xs text-white mt-1">
+              Utilisateur : {profile.full_name}
+            </p>
           )}
         </div>
 

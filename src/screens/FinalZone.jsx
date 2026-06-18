@@ -151,7 +151,7 @@ const FinalZone = () => {
           <form onSubmit={handleUnlock} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mot de passe 1 (Propriétaire 1)
+                Mot de passe 1
               </label>
               <input
                 type="password"
@@ -164,7 +164,7 @@ const FinalZone = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mot de passe 2 (Propriétaire 2)
+                Mot de passe 2
               </label>
               <input
                 type="password"
