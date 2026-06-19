@@ -11,7 +11,7 @@ const AppBar = () => {
     <div className="flex fixed top-0 left-54 right-0 h-16 bg-white shadow shadow-blue-100 items-center justify-between px-6 z-50">
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold">Bienvenue, {profile?.full_name}</h1>
+          <h1 className="text-xl font-bold uppercase">{profile?.full_name}</h1>
           {profile?.role === "admin" && (
             <p className="text-sm text-white bg-amber-800 px-5 rounded-full opacity-60">
               {profile?.role}

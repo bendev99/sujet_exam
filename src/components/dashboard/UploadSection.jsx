@@ -87,16 +87,18 @@ const UploadSection = ({
               <option value="philo">Philosophie</option>
               <option value="histo-geo">Histoire-Géographie</option>
               <option value="anglais">Anglais</option>
+              <option value="eps">EPS Ecrit</option>
+              <option value="lv2">LV2</option>
             </select>
           </div>
 
           <button
             type="submit"
             disabled={uploading || !file}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl transition w-full md:w-auto justify-center"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-xl transition w-full md:w-auto justify-center cursor-pointer"
           >
             {uploading ? <FaSpinner className="animate-spin" /> : <FaUpload />}
-            {uploading ? "Publication..." : "Publier le sujet"}
+            {uploading ? "Déposition..." : "Déposer le sujet"}
           </button>
         </div>
       </form>

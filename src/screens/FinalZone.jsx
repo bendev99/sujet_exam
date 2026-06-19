@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Navigate } from "react-router-dom";
 import { supabase } from "../base/supabase";
@@ -29,7 +29,6 @@ const FinalZone = () => {
     e.preventDefault();
     setUnlocking(true);
     try {
-      // Appel de la fonction RPC sécurisée (les mots de passe ne transitent pas en clair)
       const { data, error } = await supabase.rpc(
         "verify_final_zone_passwords",
         {
@@ -67,6 +66,7 @@ const FinalZone = () => {
   const fetchFinalSujets = async () => {
     setLoading(true);
     try {
+      // LISTE COMPLÈTE DES 8 MATIÈRES
       const matieres = [
         "maths",
         "francais",
@@ -74,10 +74,13 @@ const FinalZone = () => {
         "philo",
         "histo-geo",
         "anglais",
+        "eps",
+        "lv2",
       ];
+
       let allFinal = [];
 
-      // Pour chaque matière, on ne prend QUE les 3 sujets les plus récents
+      // Pour chaque matière, on récupère les sujets avec statut "final"
       for (const mat of matieres) {
         const { data, error } = await supabase
           .from("sujets")
@@ -87,8 +90,6 @@ const FinalZone = () => {
           .order("created_at", { ascending: false })
           .limit(3);
 
-        console.log("Donner : ", data);
-
         if (error) {
           console.error(`Erreur pour ${mat}:`, error);
         } else if (data?.length) {
@@ -96,21 +97,7 @@ const FinalZone = () => {
         }
       }
 
-      // Récupérer les métadonnées des fichiers réels
-      const filePaths = allFinal.map((s) => s.original_file_path);
-      const { data: filesData } = await supabase
-        .from("sujets")
-        .select("*")
-        .in("original_file_path", filePaths.length ? filePaths : ["dummy"]);
-
-      const finalWithFiles = allFinal.map((sujet) => ({
-        ...sujet,
-        file: filesData?.find(
-          (f) => f.original_file_path === sujet.original_file_path,
-        ),
-      }));
-
-      setFinalSujets(finalWithFiles);
+      setFinalSujets(allFinal);
     } catch (err) {
       toast.error("Erreur lors du chargement des sujets finaux");
       console.error(err);
@@ -127,12 +114,6 @@ const FinalZone = () => {
     if (error) return toast.error("Impossible de télécharger");
     window.open(data.signedUrl, "_blank");
   };
-
-  useEffect(() => {
-    if (profile) {
-      fetchFinalSujets();
-    }
-  }, [profile, finalSujets.length]);
 
   // ====== ÉCRAN VERROUILLÉ ======
   if (!isUnlocked) {
@@ -151,7 +132,7 @@ const FinalZone = () => {
           <form onSubmit={handleUnlock} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mot de passe 1
+                Mot de passe 1 (Propriétaire 1)
               </label>
               <input
                 type="password"
@@ -164,7 +145,7 @@ const FinalZone = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mot de passe 2
+                Mot de passe 2 (Propriétaire 2)
               </label>
               <input
                 type="password"
@@ -249,7 +230,7 @@ const FinalZone = () => {
                       onClick={() =>
                         downloadFile(sujet.original_file_path, sujet.file?.name)
                       }
-                      className="bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white p-3 rounded-full transition"
+                      className="bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white p-3 rounded-full transition cursor-pointer"
                       title="Télécharger le sujet"
                     >
                       <FaDownload size={20} />

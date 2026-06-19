@@ -26,7 +26,7 @@ const Profile = () => {
     password: "",
     full_name: "",
     phone: "",
-    role: "user",
+    role: "etablissement",
     parent_id: "",
   });
   const [creating, setCreating] = useState(false);
@@ -85,7 +85,7 @@ const Profile = () => {
       password: "",
       full_name: "",
       phone: "",
-      role: "user",
+      role: "etablissement",
       parent_id: "",
     });
     refreshUsers();
@@ -135,8 +135,10 @@ const Profile = () => {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <label className="text-sm text-gray-500">Rôle</label>
-              <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm">
+              <label className="text-sm text-gray-500">
+                {profile.role === "admin" ? "Rôle" : "Département"}
+              </label>
+              <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm uppercase">
                 <FaUserTag /> {profile.role}
               </span>
             </div>
@@ -322,7 +324,7 @@ const Profile = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    Rôle
+                    Département
                   </label>
                   <select
                     value={newUser.role}
@@ -331,7 +333,7 @@ const Profile = () => {
                     }
                     className="w-full ring ring-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg px-3 py-2"
                   >
-                    <option value="user">Enseignant</option>
+                    <option value="etablissement">Lycée/CEG</option>
                     <option value="cisco">Cisco</option>
                     <option value="dren">DREN</option>
                     <option value="men">DEXAMC</option>

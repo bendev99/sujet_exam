@@ -46,14 +46,28 @@ export const AuthProvider = ({ children }) => {
         .from("profiles")
         .select("*")
         .eq("id", authUser.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        console.error("Erreur profil:", error);
+        console.error("Erreur récupération du profil :", error);
+        await supabase.auth.signOut();
+        setUser(null);
+        setProfile(null);
         setLoading(false);
         return;
       }
 
+      // Cas 1 : Le profil n'existe pas → on déconnecte
+      if (!profileData) {
+        console.warn("Profil manquant pour l'utilisateur", authUser.id);
+        await supabase.auth.signOut();
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+
+      // Cas 2 : Le profil existe → tout va bien
       setUser(authUser);
       setProfile({ ...profileData, email: authUser.email });
     } catch (error) {

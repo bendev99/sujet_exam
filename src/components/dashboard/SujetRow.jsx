@@ -1,11 +1,10 @@
 import React from "react";
-import { FaDownload, FaEdit } from "react-icons/fa";
+import { FaDownload, FaEdit, FaCheck } from "react-icons/fa";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import toast from "react-hot-toast"; // Ajouté pour la gestion d'erreur si besoin
 
-const SujetRow = ({ sujet, role, updateStatut, downloadFile, onCorriger }) => {
-  // Fonction pour formater proprement le statut (ex: "cisco_valide" -> "Cisco Validé")
+const SujetRow = ({ sujet, role, downloadFile, onValidate, onCorriger }) => {
+  // Formater le statut
   const formatStatut = (statut) => {
     const labels = {
       brouillon: "Brouillon",
@@ -20,12 +19,14 @@ const SujetRow = ({ sujet, role, updateStatut, downloadFile, onCorriger }) => {
 
   const formatMatiere = (matiere) => {
     const labels = {
-      maths: "Mathématique",
+      maths: "Mathématiques",
       pc: "Physique-Chimie",
       francais: "Français",
       philo: "Philosophie",
-      "histo-geo": "Histo-Geo",
+      "histo-geo": "Histo-Géo",
       anglais: "Anglais",
+      eps: "EPS Ecrit",
+      lv2: "LV2",
     };
     return labels[matiere] || matiere;
   };
@@ -42,6 +43,14 @@ const SujetRow = ({ sujet, role, updateStatut, downloadFile, onCorriger }) => {
     return styles[statut] || "bg-gray-100 text-gray-700";
   };
 
+  // Déterminer si le bouton "Valider" doit être affiché
+  const canValidate = () => {
+    if (role === "cisco" && sujet.statut === "brouillon") return true;
+    if (role === "dren" && sujet.statut === "cisco_valide") return true;
+    if (role === "men" && sujet.statut === "dren_valide") return true;
+    return false;
+  };
+
   return (
     <tr className="hover:bg-gray-50 transition-colors">
       <td
@@ -53,8 +62,6 @@ const SujetRow = ({ sujet, role, updateStatut, downloadFile, onCorriger }) => {
       <td className="px-6 py-4 capitalize text-gray-700">
         {formatMatiere(sujet.matiere)}
       </td>
-
-      {/* COLONNE STATUT CORRIGÉE */}
       <td className="px-6 py-4 whitespace-nowrap">
         <span
           className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap ${getStatusStyle(
@@ -64,26 +71,39 @@ const SujetRow = ({ sujet, role, updateStatut, downloadFile, onCorriger }) => {
           {formatStatut(sujet.statut)}
         </span>
       </td>
-
       <td className="px-6 py-4 text-gray-600 whitespace-nowrap">
         {sujet.owner?.full_name}
       </td>
       <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
         {formatDistanceToNow(sujet.uploadedAt, { addSuffix: true, locale: fr })}
       </td>
-      <td className="px-6 py-4 text-right space-x-4 whitespace-nowrap">
+      <td className="px-6 py-4 text-right space-x-3 whitespace-nowrap">
+        {/* Bouton Télécharger */}
         <button
           onClick={() => downloadFile(sujet.fullPath, sujet.name)}
-          className="text-blue-600 hover:text-blue-700"
+          className="text-blue-600 hover:text-blue-700 cursor-pointer"
           title="Télécharger"
         >
           <FaDownload size={18} />
         </button>
-        {role === "cisco" && sujet.statut === "brouillon" && (
+
+        {/* Bouton Valider (selon le rôle et le statut) */}
+        {canValidate() && (
+          <button
+            onClick={() => onValidate(sujet)}
+            className="text-green-600 hover:text-green-700 cursor-pointer"
+            title="Valider ce sujet"
+          >
+            <FaCheck size={18} />
+          </button>
+        )}
+
+        {/* Bouton Corriger (uniquement pour Cisco sur brouillon) */}
+        {canValidate() && sujet.statut === "brouillon" && (
           <button
             onClick={() => onCorriger(sujet)}
-            className="text-green-600 hover:text-green-700"
-            title="Corriger/Valider"
+            className="text-orange-600 hover:text-orange-700 cursor-pointer"
+            title="Corriger/Remplacer"
           >
             <FaEdit size={18} />
           </button>

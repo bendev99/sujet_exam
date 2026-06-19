@@ -18,7 +18,9 @@ import {
   FaUsers,
   FaUserEdit,
   FaTimes,
-  FaKey, // Ajouté pour la nouvelle section
+  FaKey,
+  FaEyeSlash,
+  FaEye, // Ajouté pour la nouvelle section
 } from "react-icons/fa";
 import { LuSettings } from "react-icons/lu";
 
@@ -34,6 +36,10 @@ const Parametre = () => {
   const [finalPass2, setFinalPass2] = useState("");
   const [finalPassLoading, setFinalPassLoading] = useState(false);
   const [fetchingFinalPass, setFetchingFinalPass] = useState(false);
+
+  // Etats pour les mot de passe
+  const [showUserPass, setShowUserPass] = useState(false);
+  const [showUserRepass, setShowUserRepass] = useState(false);
 
   // État du formulaire profil
   const [formData, setFormData] = useState({
@@ -178,6 +184,17 @@ const Parametre = () => {
     toast.success(`Notifications ${newValue ? "activées" : "désactivées"}`);
   };
 
+  const handleShowUserPass = (e) => {
+    e.preventDefault();
+
+    setShowUserPass(!showUserPass);
+  };
+  const handleShowUserRepass = (e) => {
+    e.preventDefault();
+
+    setShowUserRepass(!showUserRepass);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6 transition-colors">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -249,7 +266,7 @@ const Parametre = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition disabled:opacity-50"
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition disabled:opacity-50 cursor-pointer"
               >
                 {loading ? <FaSpinner className="animate-spin" /> : <FaSave />}
                 {loading
@@ -273,34 +290,50 @@ const Parametre = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Nouveau mot de passe
                 </label>
-                <input
-                  type="password"
-                  name="newPassword"
-                  value={passwordData.newPassword}
-                  onChange={handlePasswordChange}
-                  className="w-full ring-1 ring-gray-300 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showUserPass ? "text" : "password"}
+                    name="newPassword"
+                    value={passwordData.newPassword}
+                    onChange={handlePasswordChange}
+                    className="w-full ring-1 ring-gray-300 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
+                    required
+                  />
+                  <button
+                    onClick={handleShowUserPass}
+                    className="absolute right-3 inset-y-0 text-gray-400 cursor-pointer"
+                  >
+                    {showUserPass ? <FaEyeSlash /> : <FaEye />}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Confirmer le mot de passe
                 </label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={passwordData.confirmPassword}
-                  onChange={handlePasswordChange}
-                  className="w-full ring-1 ring-gray-300 dark:border-gray-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showUserRepass ? "text" : "password"}
+                    name="confirmPassword"
+                    value={passwordData.confirmPassword}
+                    onChange={handlePasswordChange}
+                    className="w-full ring-1 ring-gray-300 dark:border-gray-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
+                    required
+                  />
+                  <button
+                    onClick={handleShowUserRepass}
+                    className="absolute right-3 inset-y-0 text-gray-400 cursor-pointer"
+                  >
+                    {showUserRepass ? <FaEyeSlash /> : <FaEye />}
+                  </button>
+                </div>
               </div>
             </div>
             <div className="flex justify-end">
               <button
                 type="submit"
                 disabled={passwordLoading}
-                className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2 px-6 rounded-lg transition disabled:opacity-50"
+                className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2 px-6 rounded-lg transition disabled:opacity-50 cursor-pointer"
               >
                 {passwordLoading ? (
                   <FaSpinner className="animate-spin" />
@@ -342,7 +375,7 @@ const Parametre = () => {
                         Mot de passe Propriétaire 1
                       </label>
                       <input
-                        type="text" // Mettez "password" si vous voulez masquer les caractères
+                        type="text"
                         value={finalPass1}
                         onChange={(e) => setFinalPass1(e.target.value)}
                         className="w-full ring-1 ring-gray-300 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-600"
@@ -366,7 +399,7 @@ const Parametre = () => {
                     <button
                       type="submit"
                       disabled={finalPassLoading}
-                      className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-lg transition disabled:opacity-50"
+                      className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-lg transition disabled:opacity-50 cursor-pointer"
                     >
                       {finalPassLoading ? (
                         <FaSpinner className="animate-spin" />

@@ -68,7 +68,7 @@ const Register = () => {
     <div className="h-screen w-screen flex items-center justify-center bg-gray-100">
       <form
         onSubmit={handleRegister}
-        className="flex flex-col gap-4 w-96 mx-auto mt-20 bg-white p-8 rounded-lg shadow-md"
+        className="flex flex-col gap-4 w-96 mx-auto bg-white p-8 rounded-lg shadow-md"
       >
         <h1 className="text-3xl font-bold text-center text-gray-800">
           Register
@@ -108,10 +108,11 @@ const Register = () => {
             onChange={(e) => setRole(e.target.value)}
             className="border border-gray-300 rounded-md py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="user">Enseignant</option>
+            <option value="etablissement">Enseignant</option>
             <option value="cisco">Cisco</option>
             <option value="dren">DREN</option>
             <option value="men">DEXAMC</option>
+            <option value="admin">Admin</option>
           </select>
         </div>
         <button

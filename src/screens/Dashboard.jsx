@@ -18,6 +18,7 @@ import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import UploadSection from "../components/dashboard/UploadSection";
 import SujetRow from "../components/dashboard/SujetRow";
+import { FaPrint } from "react-icons/fa";
 
 const Dashboard = () => {
   const { profile } = useAuth();
@@ -32,9 +33,7 @@ const Dashboard = () => {
   const [currentSujet, setCurrentSujet] = useState(null);
   const [uploadingCorrection, setUploadingCorrection] = useState(false);
 
-  // SOLUTION PROBLÈME 1 : États séparés pour chaque bouton
-  const [processingDren, setProcessingDren] = useState(false);
-  const [processingDexamc, setProcessingDexamc] = useState(false);
+  // État pour le tri final
   const [processingFinal, setProcessingFinal] = useState(false);
 
   const matieresList = [
@@ -44,13 +43,17 @@ const Dashboard = () => {
     "philo",
     "histo-geo",
     "anglais",
+    "eps",
+    "lv2",
   ];
 
   if (!profile) return <Navigate to="/" replace />;
 
+  // ====== RECUPERATION DE TOUS LES SUJETS ======
   const fetchSujets = useCallback(async () => {
     setLoadingFiles(true);
     try {
+      // 1. Lister fichiers du bucket
       const { data: folders } = await supabase.storage
         .from("sujets")
         .list("", { limit: 1000 });
@@ -73,6 +76,7 @@ const Dashboard = () => {
         }
       }
 
+      // 2. Métadonnées
       const filePaths = allFiles.map((f) => f.fullPath);
       const { data: metadata } = await supabase
         .from("sujets")
@@ -91,26 +95,39 @@ const Dashboard = () => {
         statut: metadataMap[file.fullPath]?.statut || "brouillon",
       }));
 
+      // 3. FILTRAGE SELON LE RÔLE
       let filtered = enriched.filter((f) => f.statut !== "remplace");
 
-      if (profile.role === "user") {
+      if (profile.role === "etablissement") {
+        // Enseignant : uniquement ses propres sujets
         filtered = filtered.filter((f) => f.ownerId === profile.id);
-      } else if (["cisco", "dren", "men", "dexamc"].includes(profile.role)) {
+      } else if (["cisco", "dren", "men"].includes(profile.role)) {
+        // Rôles hiérarchiques : sujets de leurs descendants
         const descendantIds = await getDescendantIds(profile.id);
         filtered = filtered.filter((f) => descendantIds.includes(f.ownerId));
+      } else if (profile.role === "admin") {
+        // Admin : tout voir
       }
 
+      // 4. RÉCUPÉRATION DES PROPRIÉTAIRES via RPC (bypass RLS)
       const ownerIds = [...new Set(filtered.map((f) => f.ownerId))].filter(
         Boolean,
       );
       let ownerMap = {};
 
       if (ownerIds.length > 0) {
-        const { data: owners } = await supabase
-          .from("profiles")
-          .select("id, full_name")
-          .in("id", ownerIds);
-        ownerMap = Object.fromEntries(owners?.map((o) => [o.id, o]) || []);
+        const { data: owners, error } = await supabase.rpc(
+          "get_profiles_by_ids",
+          {
+            profile_ids: ownerIds,
+          },
+        );
+
+        if (error) {
+          console.error("Erreur récupération propriétaires:", error);
+        } else {
+          ownerMap = Object.fromEntries(owners?.map((o) => [o.id, o]) || []);
+        }
       }
 
       setSujets(
@@ -134,6 +151,40 @@ const Dashboard = () => {
     return data || [];
   };
 
+  // ====== VALIDATION MANUELLE D'UN SUJET ======
+  const handleValidateSujet = async (sujet) => {
+    let newStatut = "";
+    let message = "";
+
+    // Déterminer le nouveau statut selon le rôle et le statut actuel
+    if (profile.role === "cisco" && sujet.statut === "brouillon") {
+      newStatut = "cisco_valide";
+      message = "Sujet validé par Cisco";
+    } else if (profile.role === "dren" && sujet.statut === "cisco_valide") {
+      newStatut = "dren_valide";
+      message = "Sujet validé par DREN";
+    } else if (profile.role === "men" && sujet.statut === "dren_valide") {
+      newStatut = "dexamc_valide";
+      message = "Sujet validé par DEXAMC";
+    } else {
+      toast.error("Action non autorisée");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("sujets")
+      .update({ statut: newStatut, updated_at: new Date().toISOString() })
+      .eq("id", sujet.id);
+
+    if (error) {
+      toast.error("Erreur : " + error.message);
+    } else {
+      toast.success(message);
+      fetchSujets();
+    }
+  };
+
+  // ====== CORRECTION (UPLOAD NOUVEAU FICHIER) ======
   const handleCorrectionUpload = async (e) => {
     e.preventDefault();
     if (!correctionFile || !currentSujet) return;
@@ -148,6 +199,7 @@ const Dashboard = () => {
         .upload(filePath, correctionFile);
       if (uploadError) throw uploadError;
 
+      // Marquer l'ancien comme remplacé
       await supabase
         .from("sujets")
         .update({
@@ -156,6 +208,7 @@ const Dashboard = () => {
         })
         .eq("id", currentSujet.id);
 
+      // Insérer le nouveau sujet corrigé
       await supabase.from("sujets").insert({
         user_id: currentSujet.user_id,
         matiere: currentSujet.matiere,
@@ -164,7 +217,7 @@ const Dashboard = () => {
         parent_sujet_id: currentSujet.id,
       });
 
-      toast.success("Correction uploadée et validée");
+      toast.success("Correction déposer et validée");
       setShowCorrectionModal(false);
       setCorrectionFile(null);
       setCurrentSujet(null);
@@ -176,6 +229,7 @@ const Dashboard = () => {
     }
   };
 
+  // ====== UPLOAD INITIAL ======
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!file || !matiere)
@@ -198,7 +252,7 @@ const Dashboard = () => {
         original_file_path: filePath,
       });
 
-      toast.success("Sujet uploadé avec succès !");
+      toast.success("Sujet déposer avec succès !");
       setFile(null);
       setMatiere("maths");
       fetchSujets();
@@ -217,76 +271,13 @@ const Dashboard = () => {
     window.open(data.signedUrl, "_blank");
   };
 
-  const updateStatut = async (sujetId, newStatut, message) => {
-    const { error } = await supabase
-      .from("sujets")
-      .update({ statut: newStatut, updated_at: new Date().toISOString() })
-      .eq("id", sujetId);
-    if (error) toast.error(error.message);
-    else {
-      toast.success(message);
-      fetchSujets();
-    }
-  };
-
-  // Bouton de selection auto pour Dren
-  const handleTriDren = async () => {
-    setProcessingDren(true);
-    let hasError = false;
-    let triFiles = 0;
-
-    for (const mat of matieresList) {
-      const { data, error } = await supabase.rpc("select_15_for_dren", {
-        p_matiere: mat,
-      });
-      if (error) {
-        console.error(`Erreur tri DREN pour ${mat}:`, error);
-        hasError = true;
-      } else if (data) {
-        triFiles += data.length || 0;
-      }
-    }
-
-    setProcessingDren(false);
-
-    if (hasError) toast.error("Erreur lors du tri de certaines matières");
-    else toast.success(`${triFiles} sujets sélectionnés`);
-    fetchSujets();
-  };
-
-  // Bouton de selection auto pour Dexamc
-  const handleTriDexamc = async () => {
-    setProcessingDexamc(true);
-    let hasError = false;
-    let triFiles = 0;
-
-    for (const mat of matieresList) {
-      const { data, error } = await supabase.rpc("select_10_for_dexamc", {
-        p_matiere: mat,
-      });
-      if (error) {
-        console.error(`Erreur tri DEXAMC pour ${mat}:`, error);
-        hasError = true;
-      } else if (data) {
-        triFiles += data.length || 0;
-      }
-    }
-
-    setProcessingDexamc(false);
-
-    if (hasError) toast.error("Erreur lors du tri de certaines matières");
-    else toast.success(`${triFiles} sujets sélectionnés`);
-    fetchSujets();
-  };
-
-  // Bouton de selection auto pour les sujets finaux
+  // ====== GÉNÉRER 3 SUJETS FINAUX ======
   const handleGenererFinaux = async () => {
     setProcessingFinal(true);
     let hasError = false;
     let totalSelected = 0;
 
     for (const mat of matieresList) {
-      // Appel de la fonction RPC
       const { data, error } = await supabase.rpc("select_3_final", {
         p_matiere: mat,
       });
@@ -307,14 +298,11 @@ const Dashboard = () => {
       toast.success(`${totalSelected} sujets finaux générés`);
     }
 
-    // Rafraîchir pour voir les nouveaux statuts
     await fetchSujets();
   };
 
   useEffect(() => {
-    if (profile) {
-      fetchSujets();
-    }
+    if (profile) fetchSujets();
   }, [profile, fetchSujets]);
 
   return (
@@ -337,8 +325,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Upload Section */}
-        {profile.role === "user" || profile.role === "cisco" ? (
+        {/* Upload Section (uniquement pour enseignant et cisco) */}
+        {(profile.role === "etablissement" || profile.role === "cisco") && (
           <UploadSection
             file={file}
             setFile={setFile}
@@ -349,7 +337,7 @@ const Dashboard = () => {
             dragActive={dragActive}
             setDragActive={setDragActive}
           />
-        ) : null}
+        )}
 
         {/* Liste des sujets */}
         <div className="bg-white rounded-3xl shadow-lg overflow-hidden">
@@ -358,49 +346,20 @@ const Dashboard = () => {
               <FaFileWord className="text-blue-500" /> Sujets disponibles
             </h2>
 
-            {/* BOUTONS DE TRI CORRIGÉS */}
-            {profile.role === "dren" && (
-              <div className="flex justify-end w-full md:w-auto">
-                <button
-                  onClick={handleTriDren}
-                  disabled={processingDren}
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 disabled:opacity-50"
-                >
-                  {processingDren ? (
-                    <FaSpinner className="animate-spin" />
-                  ) : (
-                    <FaRandom />
-                  )}
-                  Trier 15 sujets (Toutes matières)
-                </button>
-              </div>
-            )}
-
+            {/* BOUTON GÉNÉRER 3 FINAUX (uniquement pour MEN) */}
             {profile.role === "men" && (
-              <div className="flex justify-end gap-4 w-full md:w-auto flex-wrap">
-                <button
-                  onClick={handleTriDexamc}
-                  disabled={processingDexamc}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 disabled:opacity-50"
-                >
-                  {processingDexamc ? (
-                    <FaSpinner className="animate-spin" />
-                  ) : (
-                    <FaRandom />
-                  )}
-                  Trier 10 sujets (Toutes matières)
-                </button>
+              <div className="flex justify-end w-full md:w-auto">
                 <button
                   onClick={handleGenererFinaux}
                   disabled={processingFinal}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 disabled:opacity-50"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 disabled:opacity-50 cursor-pointer"
                 >
                   {processingFinal ? (
                     <FaSpinner className="animate-spin" />
                   ) : (
-                    <FaStar />
+                    <FaPrint />
                   )}
-                  Générer 3 finaux (Toutes matières)
+                  Générer les 3 sujets finaux
                 </button>
               </div>
             )}
@@ -450,8 +409,8 @@ const Dashboard = () => {
                       key={sujet.fullPath}
                       sujet={sujet}
                       role={profile.role}
-                      updateStatut={updateStatut}
                       downloadFile={downloadFile}
+                      onValidate={handleValidateSujet}
                       onCorriger={(sujet) => {
                         setCurrentSujet(sujet);
                         setShowCorrectionModal(true);
@@ -468,7 +427,7 @@ const Dashboard = () => {
         {showCorrectionModal && (
           <div className="fixed inset-0 bg-gray-900/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-              <h3 className="text-xl font-bold mb-4">Uploader la correction</h3>
+              <h3 className="text-xl font-bold mb-4">Déposer la correction</h3>
               <form onSubmit={handleCorrectionUpload}>
                 <input
                   type="file"
@@ -493,7 +452,7 @@ const Dashboard = () => {
                     {uploadingCorrection ? (
                       <FaSpinner className="animate-spin" />
                     ) : (
-                      "Uploader la correction"
+                      "Déposer la correction"
                     )}
                   </button>
                 </div>

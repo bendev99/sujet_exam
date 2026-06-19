@@ -97,7 +97,7 @@ const Sidebar = () => {
       <div className="flex p-3 justify-center">
         <button
           onClick={logout}
-          className="p-2 rounded bg-red-400 hover:bg-red-500 w-full flex items-center justify-center gap-2"
+          className="p-2 rounded bg-red-400 hover:bg-red-500 w-full flex items-center justify-center gap-2 cursor-pointer"
         >
           <p className="text-xl">Deconnexion</p>
           <BiLogOutCircle size={16} className="rotate-180" />
